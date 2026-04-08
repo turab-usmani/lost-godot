@@ -1,3 +1,19 @@
 [gd_scene format=3 uid="uid://cqldd2lmybmyx"]
 
+[ext_resource type="Script" uid="uid://bbsoduvkg6ra5" path="res://scripts/player.gd" id="1_3vyb7"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_u8vuu"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_3vyb7"]
+
 [node name="player" type="CharacterBody3D" unique_id=851847586]
+script = ExtResource("1_3vyb7")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=440571440]
+shape = SubResource("SphereShape3D_u8vuu")
+
+[node name="Cursor" type="MeshInstance3D" parent="." unique_id=1882924732]
+mesh = SubResource("SphereMesh_3vyb7")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=712031791]
+current = true

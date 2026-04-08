@@ -1,3 +1,50 @@
 [gd_scene format=3 uid="uid://yqcfrv6l1how"]
 
-[node name="main" type="Node3D" unique_id=1705540169]
+[ext_resource type="Script" uid="uid://ihes1frt4sxu" path="res://scripts/main.gd" id="1_o5qli"]
+[ext_resource type="PackedScene" uid="uid://cqldd2lmybmyx" path="res://scenes/player.tscn" id="2_0wfyh"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_0wfyh"]
+
+[sub_resource type="Sky" id="Sky_sugp2"]
+sky_material = SubResource("ProceduralSkyMaterial_0wfyh")
+
+[sub_resource type="Environment" id="Environment_jyhfs"]
+background_mode = 2
+sky = SubResource("Sky_sugp2")
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_0wfyh"]
+size = Vector3(1, 0.1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_sugp2"]
+size = Vector3(1, 0.1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_0wfyh"]
+size = Vector3(4, 4, 4)
+
+[node name="main" type="Node3D" unique_id=1705540169 node_paths=PackedStringArray("player")]
+script = ExtResource("1_o5qli")
+player = NodePath("player")
+
+[node name="player" parent="." unique_id=851847586 instance=ExtResource("2_0wfyh")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0)
+
+[node name="Camera3D" parent="player/SpringArm3D" parent_id_path=PackedInt32Array(851847586, 1675570227) index="0" unique_id=712031791]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=866634321]
+environment = SubResource("Environment_jyhfs")
+
+[node name="Ground" type="StaticBody3D" parent="." unique_id=458726341]
+transform = Transform3D(100, 0, 0, 0, 1, 0, 0, 0, 100, 0, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground" unique_id=678464482]
+shape = SubResource("BoxShape3D_0wfyh")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground" unique_id=2096112652]
+mesh = SubResource("BoxMesh_sugp2")
+
+[node name="Box" type="MeshInstance3D" parent="." unique_id=1953193515]
+transform = Transform3D(0.99979067, 0.013796608, 0.015109136, -0.014127619, 0.99965763, 0.022024155, -0.014800093, -0.02223301, 0.99964327, 0, 7, -27)
+mesh = SubResource("BoxMesh_0wfyh")
+
+[editable path="player"]
