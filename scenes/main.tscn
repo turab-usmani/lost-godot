@@ -2,11 +2,25 @@
 
 [ext_resource type="Script" uid="uid://ihes1frt4sxu" path="res://scripts/main.gd" id="1_o5qli"]
 [ext_resource type="PackedScene" uid="uid://cqldd2lmybmyx" path="res://scenes/player.tscn" id="2_0wfyh"]
+[ext_resource type="Shader" uid="uid://cuhoy1xaomvfx" path="res://assets/sky.gdshader" id="3_sugp2"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_0wfyh"]
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_sugp2"]
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_jyhfs"]
+noise = SubResource("FastNoiseLite_sugp2")
+seamless = true
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_jyhfs"]
+shader = ExtResource("3_sugp2")
+shader_parameter/bg_color = Color(0.02, 0.01, 0.05, 1)
+shader_parameter/gas_color_1 = Color(0.4, 0.1, 0.6, 1)
+shader_parameter/gas_color_2 = Color(0.1, 0.3, 0.8, 1)
+shader_parameter/drift_speed = 0.02
+shader_parameter/star_density = 600.0
+shader_parameter/noise_tex = SubResource("NoiseTexture2D_jyhfs")
 
 [sub_resource type="Sky" id="Sky_sugp2"]
-sky_material = SubResource("ProceduralSkyMaterial_0wfyh")
+sky_material = SubResource("ShaderMaterial_jyhfs")
 
 [sub_resource type="Environment" id="Environment_jyhfs"]
 background_mode = 2
@@ -26,9 +40,6 @@ script = ExtResource("1_o5qli")
 player = NodePath("player")
 
 [node name="player" parent="." unique_id=851847586 instance=ExtResource("2_0wfyh")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0)
-
-[node name="Camera3D" parent="player/SpringArm3D" parent_id_path=PackedInt32Array(851847586, 1675570227) index="0" unique_id=712031791]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=866634321]

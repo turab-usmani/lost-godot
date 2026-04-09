@@ -20,20 +20,16 @@ func _physics_process(delta: float) -> void:
 		_spawn_noise_hazard()
 
 	# 2. Handle Movement and Cleanup
-	# Iterate backwards so we can safely remove elements while looping
 	for i in range(active_hazards.size() - 1, -1, -1):
 		var hazard_data = active_hazards[i]
 		var area: Area3D = hazard_data["node"]
 
-		# If the node was destroyed elsewhere, clean up the array
 		if not is_instance_valid(area):
 			active_hazards.remove_at(i)
 			continue
 
-		# Move the Area3D along its calculated direction
 		area.global_position += hazard_data["direction"] * hazard_data["speed"] * delta
 
-		# Clean up the hazard if it travels too far past the player to save memory
 		if area.global_position.distance_to(player.global_position) > spawn_radius * 1.5:
 			area.queue_free()
 			active_hazards.remove_at(i)
@@ -52,41 +48,66 @@ func _spawn_noise_hazard() -> void:
 	
 	area.global_position = player.global_position + (spawn_dir * spawn_radius)
 
-	# --- Generate the Noise Mesh Visually ---
+	# --- Generate the UNIQUE Noise Mesh ---
 	var mesh_instance = MeshInstance3D.new()
-	var sphere_mesh = SphereMesh.new()
 	
+	# Call our new function to build the physical potato shape
+	mesh_instance.mesh = _generate_asteroid_mesh()
+	
+	# Apply a random rocky material color
 	var mat = StandardMaterial3D.new()
-	var noise_tex = NoiseTexture2D.new()
-	noise_tex.noise = FastNoiseLite.new()
-	noise_tex.noise.seed = randi()
-	noise_tex.noise.frequency = 0.05
+	mat.albedo_color = Color(randf_range(0.3, 0.6), randf_range(0.3, 0.6), randf_range(0.3, 0.6))
+	mat.roughness = 0.9
+	mesh_instance.material_override = mat
 	
-	# Use the noise texture as a heightmap to distort the sphere into a "noise mesh"
-	mat.heightmap_enabled = true
-	mat.heightmap_scale = 1.5 
-	mat.heightmap_texture = noise_tex
-	mat.albedo_color = Color(randf_range(0.3, 1), randf_range(0.3, 1), randf_range(0.3, 1))
-
-	sphere_mesh.material = mat
-	mesh_instance.mesh = sphere_mesh
 	area.add_child(mesh_instance)
 
 	# --- Add Collision ---
 	var collision = CollisionShape3D.new()
 	var shape = SphereShape3D.new()
-	shape.radius = 0.5
+	shape.radius = 1.0 # Adjusted to match the new mesh size
 	collision.shape = shape
 	area.add_child(collision)
 
 	# --- Calculate Movement Variables ---
-	# We want it to move toward where the player was when it spawned
 	var target_dir = (player.global_position - area.global_position).normalized()
 	var speed = randf_range(min_speed, max_speed)
 
-	# Store it in our tracking array
 	active_hazards.append({
 		"node": area,
 		"direction": target_dir,
 		"speed": speed
 	})
+
+# === THE NEW MESH GENERATOR ===
+# Placed at the bottom of your script so _spawn_noise_hazard can use it
+func _generate_asteroid_mesh() -> ArrayMesh:
+	var noise = FastNoiseLite.new()
+	noise.seed = randi()
+	noise.frequency = randf_range(0.02, 0.05) 
+	noise.fractal_type = FastNoiseLite.FRACTAL_RIDGED 
+	
+	var sphere = SphereMesh.new()
+	sphere.radius = 1.0
+	sphere.height = 2.0
+	sphere.radial_segments = 32 
+	sphere.rings = 16
+
+	var arrays = sphere.get_mesh_arrays()
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	
+	for i in range(vertices.size()):
+		var noise_val = noise.get_noise_3dv(vertices[i] * 10.0) 
+		vertices[i] += normals[i] * noise_val * 0.4
+		
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	
+	var deformed_mesh = ArrayMesh.new()
+	deformed_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	
+	var st = SurfaceTool.new()
+	st.create_from(deformed_mesh, 0)
+	st.generate_normals() 
+	
+	return st.commit()
