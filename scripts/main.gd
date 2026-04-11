@@ -38,7 +38,6 @@ func _spawn_noise_hazard() -> void:
 	var area = Area3D.new()
 	add_child(area)
 
-	# --- Calculate a random point on a sphere around the player ---
 	var u = randf()
 	var v = randf()
 	var theta = u * 2.0 * PI
@@ -50,22 +49,41 @@ func _spawn_noise_hazard() -> void:
 
 	# --- Generate the UNIQUE Noise Mesh ---
 	var mesh_instance = MeshInstance3D.new()
-	
-	# Call our new function to build the physical potato shape
 	mesh_instance.mesh = _generate_asteroid_mesh()
 	
-	# Apply a random rocky material color
-	var mat = StandardMaterial3D.new()
-	mat.albedo_color = Color(randf_range(0.3, 0.6), randf_range(0.3, 0.6), randf_range(0.3, 0.6))
-	mat.roughness = 0.9
-	mesh_instance.material_override = mat
+	# === THE NEW SHADER MATERIAL ===
+	var mat = ShaderMaterial.new()
+	var shader = Shader.new()
+	shader.code = _get_vein_shader_code()
+	mat.shader = shader
 	
+	# Pick a dark, charred base color for the rock
+	var rock_color = Color(randf_range(0.05, 0.15), randf_range(0.05, 0.15), randf_range(0.05, 0.15))
+	
+	# Pick a random neon color for the glowing veins
+	var neon_colors = [
+		Color(0.9, 0.1, 0.1), # Red
+		Color(0.1, 0.9, 0.2), # Green
+		Color(0.1, 0.4, 1.0), # Blue
+		Color(0.8, 0.1, 1.0), # Purple
+		Color(1.0, 0.6, 0.1),  # Orange
+		Color(0.748, 0.236, 0.247, 1.0)
+	]
+	var glow = neon_colors[randi() % neon_colors.size()]
+	
+	# Send the unique variables to the graphics card
+	mat.set_shader_parameter("base_color", rock_color)
+	mat.set_shader_parameter("glow_color", glow)
+	# This massive random offset ensures every rock has a completely unique vein layout
+	mat.set_shader_parameter("offset", Vector3(randf() * 100.0, randf() * 100.0, randf() * 100.0))
+	
+	mesh_instance.material_override = mat
 	area.add_child(mesh_instance)
 
 	# --- Add Collision ---
 	var collision = CollisionShape3D.new()
 	var shape = SphereShape3D.new()
-	shape.radius = 1.0 # Adjusted to match the new mesh size
+	shape.radius = 1.0 
 	collision.shape = shape
 	area.add_child(collision)
 
@@ -79,8 +97,7 @@ func _spawn_noise_hazard() -> void:
 		"speed": speed
 	})
 
-# === THE NEW MESH GENERATOR ===
-# Placed at the bottom of your script so _spawn_noise_hazard can use it
+# === THE MESH GENERATOR (From before) ===
 func _generate_asteroid_mesh() -> ArrayMesh:
 	var noise = FastNoiseLite.new()
 	noise.seed = randi()
@@ -111,3 +128,72 @@ func _generate_asteroid_mesh() -> ArrayMesh:
 	st.generate_normals() 
 	
 	return st.commit()
+
+# === THE GLOWING VEIN SHADER CODE ===
+# We store the shader code as a string here so it doesn't require a separate file!
+func _get_vein_shader_code() -> String:
+	return """
+	shader_type spatial;
+
+	uniform vec3 base_color : source_color = vec3(0.1, 0.1, 0.1);
+	uniform vec3 glow_color : source_color = vec3(0.0, 0.8, 1.0);
+	uniform float glow_intensity = 6.0;
+	uniform vec3 offset; 
+
+	varying vec3 local_pos;
+
+	void vertex() {
+		// Capture the rock's 3D coordinates before camera movement 
+		// so the veins stick to the rock and don't slide around
+		local_pos = VERTEX;
+	}
+
+	// Mathematical magic to generate random 3D coordinates
+	vec3 hash33(vec3 p) {
+		p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+		p += dot(p, p.yxz + 33.33);
+		return fract((p.xxy + p.yxx) * p.zyx);
+	}
+
+	void fragment() {
+		// Multiply by 2.5 to scale how many veins appear. 
+		vec3 p = local_pos * 2.5 + offset;
+		
+		vec3 n = floor(p);
+		vec3 f = fract(p);
+
+		float F1 = 8.0; // Nearest cell
+		float F2 = 8.0; // Second nearest cell
+
+		// Generate a 3D Voronoi Cellular pattern
+		for (int k = -1; k <= 1; k++) {
+			for (int j = -1; j <= 1; j++) {
+				for (int i = -1; i <= 1; i++) {
+					vec3 g = vec3(float(i), float(j), float(k));
+					vec3 o = hash33(n + g);
+					vec3 r = g - f + o;
+					float d = dot(r, r);
+
+					if (d < F1) {
+						F2 = F1;
+						F1 = d;
+					} else if (d < F2) {
+						F2 = d;
+					}
+				}
+			}
+		}
+
+		// The "vein" is the border between cells.
+		// By subtracting the nearest point from the second nearest, we find the edges.
+		float edge = F2 - F1;
+		
+		// Invert it and sharpen it so we only get thin glowing lines
+		float vein_mask = 1.0 - smoothstep(0.0, 0.15, edge);
+
+		ALBEDO = base_color;
+		// Multiply the neon color by the mask, then crank up the brightness
+		EMISSION = glow_color * vein_mask * glow_intensity;
+		ROUGHNESS = 0.9;
+	}
+	"""
