@@ -1,0 +1,15 @@
+so right now what im thinking is that the player moves
+and collects the orbs and gets bigger, orbs of similar color
+have to be collected, getting an orb of a different color
+will reduce size. Some colors will lead to death like a red orb
+
+I could add power ups: Like color picker, that allows you to change ur color
+
+Speed boost, size reduction (to avoid orbs)
+
+The flow of the game will be like this, the overall speed of the orbs
+keep increasing so you collide more which could lead to your death or
+getting bigger you have to navigate to get into the right orb color,
+also have to navigate to avoid the orbs,
+
+the orbs themselves collide and get bigger.
